@@ -8,6 +8,9 @@ import time
 # Load environment variables
 load_dotenv()
 
+# Import json module
+import json
+
 # Set page configuration
 st.set_page_config(
     page_title="Local LLM Chat App",
@@ -76,14 +79,18 @@ def query_ollama(prompt, model="llama3", stream=True):
                 # Stream the response
                 for chunk in response.iter_lines():
                     if chunk:
-                        chunk_json = requests.models.json.loads(chunk)
-                        content = chunk_json.get("response", "")
-                        collected_chunks.append(content)
-                        collected_message = "".join(collected_chunks)
-                        message_placeholder.markdown(collected_message)
-                        
-                        # Check if this is the last chunk
-                        if chunk_json.get("done", False):
+                        try:
+                            chunk_json = json.loads(chunk.decode('utf-8'))
+                            content = chunk_json.get("response", "")
+                            collected_chunks.append(content)
+                            collected_message = "".join(collected_chunks)
+                            message_placeholder.markdown(collected_message)
+                            
+                            # Check if this is the last chunk
+                            if chunk_json.get("done", False):
+                                break
+                        except json.JSONDecodeError as e:
+                            st.error(f"Error decoding JSON: {str(e)}")
                             break
                 return collected_message
             else:
